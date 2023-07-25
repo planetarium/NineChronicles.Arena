@@ -9,7 +9,7 @@ if not stage:
     logging.error("Config file not found")
     raise FileNotFoundError(f"No config file for environment [{stage}]")
 
-if os.path.exists(os.path.join("arena", "settings", f"{stage}ipy")):
+if os.path.exists(os.path.join("arena", "settings", f"{stage}.py")):
     env_module = __import__(f"arena.settings.{stage}", fromlist=["arena.settings"])
     envs = {k: v for k, v in env_module.__dict__.items() if k.upper() == k}
     config = Config(environ=envs)

@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 from mangum import Mangum
 
-from arena import settings
+from arena import settings, api
 
 __VERSION__ = "0.0.1"
 
@@ -28,6 +28,8 @@ def ping():
     """
     return "pong"
 
+
+app.include_router(api.router)
 
 handler = Mangum(app)
 
