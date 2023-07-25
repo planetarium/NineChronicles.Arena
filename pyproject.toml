@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "ninechronicles-arena"
+version = "0.1.0"
+description = "Arena service for NineChronicles"
+authors = ["hyeon <hyeon@planetariumhq.com>"]
+license = "AGPL"
+readme = "README.md"
+packages = [{include = "ninechronicles"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.100.0"
+mangum = "^0.17.0"
+psycopg2-binary = "^2.9.6"
+sqlalchemy = "^2.0.19"
+gql = {extras = ["requests"], version = "^3.4.1"}
+uvicorn = "^0.23.1"
+
+
+[tool.poetry.group.dev.dependencies]
+ipython = "^8.14.0"
+pytest = "^7.4.0"
+alembic = "^1.11.1"
+aws-cdk-lib = "^2.88.0"
+constructs = "^10.2.69"
+python-dotenv = "^1.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
