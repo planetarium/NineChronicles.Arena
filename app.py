@@ -1,28 +1,43 @@
 #!/usr/bin/env python3
+import logging
 import os
 
 import aws_cdk as cdk
+from dotenv import dotenv_values
 
-from test.test_stack import TestStack
+from arena.arena_cdk_stack import ArenaStack
+from common import Config
+from common.shared_stack import SharedStack
 
+stage = os.environ.get("STAGE", "development")
+
+if os.path.exists(f".env.{stage}"):
+    env_values = dotenv_values(f".env.{stage}")
+    if stage != env_values["STAGE"]:
+        logging.error(f"Provided stage {stage} is not identical with STAGE in env: {env_values['STAGE']}")
+        exit(1)
+else:
+    env_values = os.environ
+
+config = Config(**{k.lower(): v for k, v in env_values.items()})
 
 app = cdk.App()
-TestStack(app, "TestStack",
-    # If you don't specify 'env', this stack will be environment-agnostic.
-    # Account/Region-dependent features and context lookups will not work,
-    # but a single synthesized template can be deployed anywhere.
 
-    # Uncomment the next line to specialize this stack for the AWS Account
-    # and Region that are implied by the current CLI configuration.
+shared = SharedStack(
+    app, f"{config.stage}-9c-arena-SharedStack",
+    env=cdk.Environment(
+        account=config.account_id, region=config.region_name,
+    ),
+    config=config,
+)
 
-    #env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),
-
-    # Uncomment the next line if you know exactly what Account and Region you
-    # want to deploy the stack to. */
-
-    #env=cdk.Environment(account='123456789012', region='us-east-1'),
-
-    # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
-    )
+ArenaStack(
+    app, f"{config.stage}-9c-arena-APIStack",
+    env=cdk.Environment(
+        account=config.account_id, region=config.region_name,
+    ),
+    config=config,
+    shared_stack=shared,
+)
 
 app.synth()
