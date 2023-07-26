@@ -1,0 +1,75 @@
+from decimal import *
+
+from sqlalchemy import Column, Integer, Text, Enum, Index, Float
+
+from common.enums import StatType
+from common.models.base import Base, AutoIdMixin
+from common.utils.cp import CPCalculator
+
+
+class CharacterSheet(Base):
+    __tablename__ = "character_sheet"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False)  # _name in CSV file
+    hp = Column(Integer, nullable=False)
+    atk = Column(Integer, nullable=False)
+    dfc = Column(Integer, nullable=False)  # defence. def in CSV file
+    cri = Column(Integer, nullable=False)
+    hit = Column(Integer, nullable=False)
+    spd = Column(Integer, nullable=False)
+    lv_hp = Column(Float, nullable=False)
+    lv_atk = Column(Float, nullable=False)
+    lv_dfc = Column(Float, nullable=False)  # defence. lv_def in CSV file
+    lv_cri = Column(Float, nullable=False)
+    lv_hit = Column(Float, nullable=False)
+    lv_spd = Column(Float, nullable=False)
+
+    def get_cp(self, level: int) -> Decimal:
+        return sum([
+            CPCalculator.get_cp(StatType.HP, Decimal(self.hp) + Decimal(self.lv_hp) * Decimal(level - 1), level),
+            CPCalculator.get_cp(StatType.ATK, Decimal(self.atk) + Decimal(self.lv_atk) * Decimal(level - 1), level),
+            CPCalculator.get_cp(StatType.DEF, Decimal(self.dfc) + Decimal(self.lv_dfc) * Decimal(level - 1), level),
+            CPCalculator.get_cp(StatType.CRI, Decimal(self.cri) + Decimal(self.lv_cri) * Decimal(level - 1), level),
+            CPCalculator.get_cp(StatType.HIT, Decimal(self.hit) + Decimal(self.lv_hit) * Decimal(level - 1), level),
+            CPCalculator.get_cp(StatType.SPD, Decimal(self.spd) + Decimal(self.lv_spd) * Decimal(level - 1), level)
+        ])
+
+
+class EquipmentItemSheet(Base):
+    __tablename__ = "equipment_item_sheet"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False)  # _name in CSV file
+    type = Column(Enum(StatType), nullable=False)  # stat_type in CSV file
+    value = Column(Integer, nullable=False)  # stat_value in CSV file
+
+    def get_cp(self, level: int) -> Decimal:
+        return CPCalculator.get_cp(self.type, Decimal(self.value))
+
+
+class CostumeStatSheet(Base):
+    __tablename__ = "costume_stat_sheet"
+
+    id = Column(Integer, primary_key=True)
+    type = Column(Enum(StatType), nullable=False)  # stat_type in CSV file
+    value = Column(Integer, nullable=False)  # stat_value in CSV file
+
+    def get_cp(self, level: int) -> Decimal:
+        return CPCalculator.get_cp(self.type, Decimal(self.value))
+
+
+class RuneOptionSheet(AutoIdMixin, Base):
+    __tablename__ = "rune_option_sheet"
+
+    rune_id = Column(Integer, nullable=False)
+    name = Column(Text, nullable=False)  # _name in CSV file
+    level = Column(Integer, nullable=False)
+    cp = Column(Integer, nullable=False)
+
+    __table_args__ = (
+        Index("rune_id_name_idx", "rune_id", "level"),
+    )
+
+    def get_cp(self, level: int) -> Decimal:
+        return Decimal(self.cp)
