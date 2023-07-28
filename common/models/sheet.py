@@ -26,14 +26,14 @@ class CharacterSheet(Base):
     lv_spd = Column(Float, nullable=False)
 
     def get_cp(self, level: int) -> Decimal:
-        return sum([
-            CPCalculator.get_cp(StatType.HP, Decimal(self.hp) + Decimal(self.lv_hp) * Decimal(level - 1), level),
-            CPCalculator.get_cp(StatType.ATK, Decimal(self.atk) + Decimal(self.lv_atk) * Decimal(level - 1), level),
-            CPCalculator.get_cp(StatType.DEF, Decimal(self.dfc) + Decimal(self.lv_dfc) * Decimal(level - 1), level),
-            CPCalculator.get_cp(StatType.CRI, Decimal(self.cri) + Decimal(self.lv_cri) * Decimal(level - 1), level),
-            CPCalculator.get_cp(StatType.HIT, Decimal(self.hit) + Decimal(self.lv_hit) * Decimal(level - 1), level),
+        return (
+            CPCalculator.get_cp(StatType.HP, Decimal(self.hp) + Decimal(self.lv_hp) * Decimal(level - 1), level) +
+            CPCalculator.get_cp(StatType.ATK, Decimal(self.atk) + Decimal(self.lv_atk) * Decimal(level - 1), level) +
+            CPCalculator.get_cp(StatType.DEF, Decimal(self.dfc) + Decimal(self.lv_dfc) * Decimal(level - 1), level) +
+            CPCalculator.get_cp(StatType.CRI, Decimal(self.cri) + Decimal(self.lv_cri) * Decimal(level - 1), level) +
+            CPCalculator.get_cp(StatType.HIT, Decimal(self.hit) + Decimal(self.lv_hit) * Decimal(level - 1), level) +
             CPCalculator.get_cp(StatType.SPD, Decimal(self.spd) + Decimal(self.lv_spd) * Decimal(level - 1), level)
-        ])
+        )
 
 
 class EquipmentItemSheet(Base):
