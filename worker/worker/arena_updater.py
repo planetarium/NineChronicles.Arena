@@ -146,7 +146,7 @@ def join_arena(sess, data: JoinArena3Schema):
     arena_info.equipment_list = equipment_list
     arena_info.costume_list = costume_list
     sess.add(arena_info)
-    sess.commit()
+    # sess.commit()
 
 
 def battle_arena(sess, data: BattleArena12Schema):
@@ -166,3 +166,4 @@ def update_arena_info(sess, block_data: List[BlockSchema]):
                     join_arena(sess, action.values)
                 if action.type_id == "battle_arena12":
                     battle_arena(sess, action.values)
+    sess.commit()
