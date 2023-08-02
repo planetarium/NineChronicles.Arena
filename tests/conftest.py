@@ -9,7 +9,8 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 
 from common.enums import ArenaType
 from common.models.arena import Arena
-from common.models.avatar import ArenaInfo, Costume, Skill, Equipment
+from common.models.avatar import ArenaInfo, Costume, Skill, Equipment, EquipmentStat
+from common.models.sheet import CharacterSheet
 
 if os.path.exists(".env.test"):
     load_dotenv(".env.test")
@@ -43,14 +44,26 @@ def setup(session):
         {"championship": 1, "round": 4, "arena_type": ArenaType.Championship,
          "start_block_index": 301, "end_block_index": 400},
     ]
+    char_sheet_data = [
+        {"id": 100010, "name": "전사",
+         "hp": 300, "atk": 20, "dfc": 10, "cri": 10, "hit": 90, "spd": 70,
+         "lv_hp": 12, "lv_atk": 0.8, "lv_dfc": 0.4, "lv_cri": 0, "lv_hit": 3.6, "lv_spd": 2.8}
+    ]
     try:
         for data in arena_data:
             session.add(Arena(**data))
+        for data in char_sheet_data:
+            session.add(CharacterSheet(**data))
         session.commit()
         yield
     finally:
+        session.execute(delete(EquipmentStat))
         session.execute(delete(Costume))
         session.execute(delete(Skill))
         session.execute(delete(Equipment))
         session.execute(delete(ArenaInfo))
+
+        session.execute(delete(CharacterSheet))
+        session.execute(delete(Arena))
+
         session.commit()

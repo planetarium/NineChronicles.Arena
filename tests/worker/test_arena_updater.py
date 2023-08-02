@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload
 from common.models.avatar import ArenaInfo
 from common.schemas.action import JoinArena3Schema
 from tests.monkeypatch.arena_updater import mock_get_avatar_state
-from worker.arena_updater import join_arena, decode_item_id
+from worker.worker.arena_updater import join_arena, decode_item_id
 
 TEST_JOIN_ARENA_DATA = {
     "id": "0xe5d183536215c34e929d963f060f0f1c",
@@ -22,7 +22,7 @@ TEST_JOIN_ARENA_DATA = {
 
 @pytest.mark.usefixtures("session", "setup")
 def test_adding_new_join_arena(session, monkeypatch):
-    monkeypatch.setattr("worker.arena_updater.get_avatar_state", mock_get_avatar_state)
+    monkeypatch.setattr("worker.worker.arena_updater.get_avatar_state", mock_get_avatar_state)
     test_data = JoinArena3Schema(**TEST_JOIN_ARENA_DATA)
     join_arena(session, test_data)
 
@@ -50,7 +50,7 @@ def test_adding_new_join_arena(session, monkeypatch):
 
 @pytest.mark.usefixtures("session", "setup")
 def test_adding_existing_avatar(session, monkeypatch):
-    monkeypatch.setattr("worker.arena_updater.get_avatar_state", mock_get_avatar_state)
+    monkeypatch.setattr("worker.worker.arena_updater.get_avatar_state", mock_get_avatar_state)
     test_data = JoinArena3Schema(**TEST_JOIN_ARENA_DATA)
     join_arena(session, test_data)
     # This must be ignored
@@ -62,7 +62,7 @@ def test_adding_existing_avatar(session, monkeypatch):
 
 @pytest.mark.usefixtures("session", "setup")
 def test_adding_wrong_arena(session, monkeypatch):
-    monkeypatch.setattr("worker.arena_updater.get_avatar_state", mock_get_avatar_state)
+    monkeypatch.setattr("worker.worker.arena_updater.get_avatar_state", mock_get_avatar_state)
     test_data = JoinArena3Schema(**TEST_JOIN_ARENA_DATA)
     test_data.round = 99
     with pytest.raises(ValueError) as e:
