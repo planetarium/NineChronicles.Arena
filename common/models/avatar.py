@@ -52,6 +52,14 @@ class Equipment(Base):
     equipped = Column(Boolean, default=False)
 
 
+class EquipmentStat(AutoIdMixin, Base):
+    __tablename__ = "equipment_stat"
+    equipment_id = Column(Text, ForeignKey("equipment.id"), nullable=False)
+    equipment = relationship("Equipment", foreign_keys=[equipment_id], backref=backref("stats_list"))
+    stat_type = Column(Enum(StatType), nullable=False)
+    stat_value = Column(Integer, nullable=False)
+
+
 class Skill(AutoIdMixin, Base):
     __tablename__ = "skill"
     type = Column(Enum(SkillType), nullable=False)
