@@ -1,5 +1,6 @@
 import os
 import random
+from time import time
 from typing import List
 from uuid import UUID
 
@@ -79,8 +80,10 @@ def join_arena(sess, data: JoinArena3Schema):
             f"Avatar {data.avatarAddress} has already been joined to arena {data.championshipId}:{data.round}")
         return
 
+    start = time()
     avatar_state_schema = get_avatar_state(data.avatarAddress)
-
+    print(f"{time()-start} for GQL")
+    start = time()
     equipped_items = {decode_item_id(x) for x in (data.equipments + data.costumes)}
 
     arena_info = ArenaInfo(
@@ -146,6 +149,7 @@ def join_arena(sess, data: JoinArena3Schema):
     arena_info.equipment_list = equipment_list
     arena_info.costume_list = costume_list
     sess.add(arena_info)
+    print(f"{time()-start} for DB")
     # sess.commit()
 
 
@@ -160,10 +164,15 @@ def battle_arena(sess, data: BattleArena12Schema):
 
 def update_arena_info(sess, block_data: List[BlockSchema]):
     for block in block_data:
+        print(f"Searching in block {block.index}...")
         for tx in block.transactions:
             for action in tx.actions:
                 if action.type_id == "join_arena3":
+                    print("join_arena found")
+                    start = time()
                     join_arena(sess, action.values)
+                    print(f"{time()-start} elapsed")
                 if action.type_id == "battle_arena12":
+                    # print("battle_arena found")
                     battle_arena(sess, action.values)
     sess.commit()
