@@ -4,10 +4,11 @@ from common.schemas.avatar import AvatarStateSchema
 def mock_get_avatar_state(avatar_addr: str) -> AvatarStateSchema:
     return AvatarStateSchema(
         **{
-            "address": "0xDD21DCc1A9d393550A49999363e383c8409Ee1A2",
-            "agentAddress": "0x8129A10a23d468377c2e0CE553B4914C161c158B",
-            "name": "freeless",
+            "address": "0x211939355049999363383840912",
+            "agentAddress": "0x81291023468377205534914161158",
+            "name": "monkeypatch",
             "level": 316,
+            "characterId": 100010,
             "inventory": {
                 "equipments": [
                     {
