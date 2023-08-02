@@ -31,7 +31,7 @@ def get_avatar_state(avatar_addr: str) -> AvatarStateSchema:
         avatar (
             avatarAddress: "{avatar_addr}"
         ) {{
-            address agentAddress name level
+            address agentAddress name level characterId
             inventory {{
                 equipments {{
                     id itemType itemSubType elementalType level itemId setId equipped
@@ -91,8 +91,7 @@ def join_arena(sess, data: JoinArena3Schema):
         arena_id=target_arena.id,
         agent_addr=avatar_state_schema.agentAddress,
         level=avatar_state_schema.level,
-        # TODO: Calculate CP
-        cp=0,
+        character_id=avatar_state_schema.characterId,
     )
 
     equipment_list = []

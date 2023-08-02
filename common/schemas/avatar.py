@@ -75,6 +75,7 @@ class AvatarStateSchema:
     agentAddress: str
     name: str
     level: int
+    characterId: int
     inventory: Union[Dict, InventorySchema]
 
     def __post_init__(self):
