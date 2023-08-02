@@ -4,7 +4,6 @@ from sqlalchemy import Column, Integer, Text, Enum, Index, Float
 
 from common.enums import StatType
 from common.models.base import Base, AutoIdMixin
-from common.utils.cp import CPCalculator
 
 
 class CharacterSheet(Base):
@@ -25,16 +24,6 @@ class CharacterSheet(Base):
     lv_hit = Column(Float, nullable=False)
     lv_spd = Column(Float, nullable=False)
 
-    def get_cp(self, level: int) -> Decimal:
-        return (
-            CPCalculator.get_cp(StatType.HP, Decimal(self.hp) + Decimal(self.lv_hp) * Decimal(level - 1), level) +
-            CPCalculator.get_cp(StatType.ATK, Decimal(self.atk) + Decimal(self.lv_atk) * Decimal(level - 1), level) +
-            CPCalculator.get_cp(StatType.DEF, Decimal(self.dfc) + Decimal(self.lv_dfc) * Decimal(level - 1), level) +
-            CPCalculator.get_cp(StatType.CRI, Decimal(self.cri) + Decimal(self.lv_cri) * Decimal(level - 1), level) +
-            CPCalculator.get_cp(StatType.HIT, Decimal(self.hit) + Decimal(self.lv_hit) * Decimal(level - 1), level) +
-            CPCalculator.get_cp(StatType.SPD, Decimal(self.spd) + Decimal(self.lv_spd) * Decimal(level - 1), level)
-        )
-
 
 class EquipmentItemSheet(Base):
     __tablename__ = "equipment_item_sheet"
@@ -44,9 +33,6 @@ class EquipmentItemSheet(Base):
     type = Column(Enum(StatType), nullable=False)  # stat_type in CSV file
     value = Column(Integer, nullable=False)  # stat_value in CSV file
 
-    def get_cp(self, level: int) -> Decimal:
-        return CPCalculator.get_cp(self.type, Decimal(self.value))
-
 
 class CostumeStatSheet(Base):
     __tablename__ = "costume_stat_sheet"
@@ -54,9 +40,6 @@ class CostumeStatSheet(Base):
     id = Column(Integer, primary_key=True)
     type = Column(Enum(StatType), nullable=False)  # stat_type in CSV file
     value = Column(Integer, nullable=False)  # stat_value in CSV file
-
-    def get_cp(self, level: int) -> Decimal:
-        return CPCalculator.get_cp(self.type, Decimal(self.value))
 
 
 class RuneOptionSheet(AutoIdMixin, Base):

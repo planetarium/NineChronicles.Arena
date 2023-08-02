@@ -13,6 +13,17 @@ class StatMapSchema:
     cRI: int
     sPD: int
 
+    @property
+    def stats_map(self):
+        return {
+            StatType.HP: self.hP,
+            StatType.HIT: self.hIT,
+            StatType.ATK: self.aTK,
+            StatType.DEF: self.dEF,
+            StatType.CRI: self.cRI,
+            StatType.SPD: self.sPD,
+        }
+
 
 @dataclass
 class SkillSchema:
@@ -42,12 +53,17 @@ class EquipmentSchema:
     stat: Union[Dict, StatSchema]
     skills: Union[List[Dict], List[SkillSchema]]
     buffSkills: Union[List[Dict], List[SkillSchema]]
-    statsMap: StatMapSchema
+    statsMap: Union[Dict, StatMapSchema]
 
     def __post_init__(self):
         self.stat = StatSchema(**self.stat)
         self.skills = [SkillSchema(**sk) for sk in self.skills]
         self.buffSkills = [SkillSchema(**buff) for buff in self.buffSkills]
+        self.statsMap = StatMapSchema(**self.statsMap)
+
+    @property
+    def stats_map(self):
+        return self.statsMap.stats_map
 
 
 @dataclass

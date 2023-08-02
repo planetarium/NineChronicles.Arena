@@ -1,4 +1,4 @@
-import os
+INT_MAX = 2 ** 31 - 1
 
 ARENA_START_SCORE = 1000
 

@@ -10,11 +10,13 @@ from common import logger
 from common.const import HOST_DICT
 from common.enums import SkillType
 from common.models.arena import Arena
-from common.models.avatar import ArenaInfo, Costume, Equipment, Skill
+from common.models.avatar import ArenaInfo, Costume, Equipment, Skill, EquipmentStat
 from common.schemas.action import JoinArena3Schema, BattleArena12Schema
 from common.schemas.avatar import AvatarStateSchema
 from common.schemas.block import BlockSchema
 from common.utils.gql import execute_gql
+
+from common.utils.cp import CPCalculator
 
 stage = os.environ.get("STAGE", "development")
 HOST = random.choice(HOST_DICT[stage])
@@ -110,6 +112,17 @@ def join_arena(sess, data: JoinArena3Schema):
             stat_value=eq.stat.totalValue,
             equipped=eq.itemId in equipped_items
         )
+
+        stats_list = []
+        for stat_type, stat_value in eq.stats_map.items():
+            if stat_value != 0:
+                stats_list.append(EquipmentStat(
+                    equipment=equipment,
+                    stat_type=stat_type,
+                    stat_value=stat_value
+                ))
+        equipment.stats_list = stats_list
+
         skill_list = []
         for skill in eq.skills:
             skill_list.append(Skill(
@@ -147,6 +160,7 @@ def join_arena(sess, data: JoinArena3Schema):
 
     arena_info.equipment_list = equipment_list
     arena_info.costume_list = costume_list
+    arena_info.cp = CPCalculator(sess).get_cp(arena_info)
     sess.add(arena_info)
     print(f"{time()-start} for DB")
     # sess.commit()
