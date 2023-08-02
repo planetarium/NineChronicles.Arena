@@ -13,7 +13,7 @@ from common.models.avatar import ArenaInfo, Costume, Equipment, Skill
 from common.schemas.action import JoinArena3Schema, BattleArena12Schema
 from common.schemas.avatar import AvatarStateSchema
 from common.schemas.block import BlockSchema
-from utils.gql import execute_gql
+from common.utils.gql import execute_gql
 
 stage = os.environ.get("STAGE", "development")
 HOST = random.choice(HOST_DICT[stage])

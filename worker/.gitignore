@@ -1,0 +1,8 @@
+# SAM Local
+template.yml
+.aws-sam/
+
+# Lambda layer for CDK
+requirements.txt
+layer/
+
