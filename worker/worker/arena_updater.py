@@ -104,6 +104,7 @@ def join_arena(sess, data: JoinArena3Schema):
             sheet_id=eq.id,
             item_type=eq.itemType,
             item_subtype=eq.itemSubType,
+            elemental_type=eq.elementalType,
             level=eq.level,
             set_id=eq.setId,
             stat_type=eq.stat.statType,
