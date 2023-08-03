@@ -1,13 +1,17 @@
-from typing import List
+from time import time
+from typing import List, Tuple, Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select, func
+from sqlalchemy.orm import joinedload
 
 from arena.dependencies import session
 from arena.schemas.arena import ArenaSchema
 from arena.schemas.arena_info import ArenaParticipantSchema
+from arena.schemas.avatar import FullAvatarSchema
+from common import logger
 from common.models.arena import Arena
-from common.models.avatar import ArenaInfo
+from common.models.avatar import ArenaInfo, Equipment, Costume
 
 router = APIRouter(
     prefix="/arena",
@@ -75,10 +79,28 @@ def arena_participant_list(championship: int, round: int, avatar_addr: str, sess
     return schema_list
 
 
-@router.get("/avatar-info", resopnse_model=FullAvatarSchema)
-def avatar_info(championship: int, round: int, avatar_addr: str, sess=Depends(session)):
+@router.get("/avatar-info", response_model=FullAvatarSchema)
+def full_avatar_info(championship: int, round: int, avatar_addr: str, sess=Depends(session)):
     """
     # Avatar Info
 
     Gets full avatar states info of given address.
     """
+    verified, arena = verify_arena(sess, championship, round)
+    if not verified:
+        raise ValueError(f"No arena of championship {championship} round {round} found.")
+
+    start = time()
+    avatar_info = sess.scalar(
+        select(ArenaInfo).where(ArenaInfo.arena_id == arena.id, ArenaInfo.avatar_addr == avatar_addr)
+        .options(joinedload(ArenaInfo.equipment_list).joinedload(Equipment.stats_list))
+        .options(joinedload(ArenaInfo.equipment_list).joinedload(Equipment.all_skill_list))
+        .where(Equipment.equipped.is_(True))
+        .options(joinedload(ArenaInfo.costume_list))
+        .where(Costume.equipped.is_(True))
+    )
+    logger.debug(f"{time()-start} elapsed for query")
+    if not arena_info:
+        raise ValueError(f"No arena participant info for avatar {avatar_addr}")
+
+    return avatar_info
