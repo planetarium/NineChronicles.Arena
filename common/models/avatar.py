@@ -35,6 +35,13 @@ class ArenaInfo(AutoIdMixin, Base):
         Index("avatar_arena_id_idx", "avatar_addr", "arena_id"),
     )
 
+    @property
+    def inventory(self):
+        return {
+            "equipment_list": self.equipment_list,
+            "costume_list": self.costume_list,
+        }
+
 
 class Equipment(Base):
     __tablename__ = "equipment"
@@ -52,6 +59,18 @@ class Equipment(Base):
     stat_type = Column(Enum(StatType))
     stat_value = Column(Integer, doc="stat.totalValue in item state")
     equipped = Column(Boolean, default=False)
+
+    @property
+    def stats_map(self):
+        return {x.stat_type.name: x.stat_value for x in self.stats_list}
+
+    @property
+    def skill_list(self):
+        return [x for x in self.all_skill_list if x.type == SkillType.SKILL]
+
+    @property
+    def buff_skill_list(self):
+        return [x for x in self.all_skill_list if x.type == SkillType.BUFF_SKILL]
 
 
 class EquipmentStat(AutoIdMixin, Base):
