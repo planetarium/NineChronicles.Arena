@@ -39,11 +39,22 @@ class ArenaStack(Stack):
                 _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaVPCAccessExecutionRole"),
             ],
         )
+        role.add_to_policy(
+            _iam.PolicyStatement(
+                actions=["secretsmanager:GetSecretValue"],
+                resources=[shared_stack.rds.secret.secret_arn],
+            )
+        )
 
         # Environment Variables
         env = {
             "REGION_NAME": config.region_name,
             "STAGE": config.stage,
+            "SECRET_ARN": shared_stack.rds.secret.secret_arn,
+            "DB_URI": f"postgresql://"
+                      f"{shared_stack.credentials.username}:[DB_PASSWORD]"
+                      f"@{shared_stack.rds.db_instance_endpoint_address}"
+                      f"/arena",
             "LOGGING_LEVEL": "INFO",
             "DB_ECHO": "False",
             "HEADLESS": config.headless,
@@ -64,8 +75,9 @@ class ArenaStack(Stack):
             layers=[layer],
             role=role,
             vpc=shared_stack.vpc,
-            timeout=cdk_core.Duration.seconds(10),
+            timeout=cdk_core.Duration.seconds(15),
             environment=env,
+            memory_size=256,
         )
 
         # ACM & Custom Domain
