@@ -4,7 +4,7 @@ from typing import List
 
 from fastapi import APIRouter
 
-from arena.schemas.arena_info import ArenaInfoSchema, ArenaBoardDataSchema
+from arena.schemas.arena_info import ArenaInfoSchema, ArenaParticipantSchema
 from common.const import ARENA_START_SCORE
 
 router = APIRouter(
@@ -33,7 +33,7 @@ def arena_info(championship: int, arena_round: int, avatar_addr: str):
     )
 
 
-@router.get("/board", response_model=List[ArenaBoardDataSchema])
+@router.get("/board", response_model=List[ArenaParticipantSchema])
 def arena_board_data(championship: int, arena_round: int, avatar_addr: str):
     """
     # Dummy Arena Board Data
@@ -45,7 +45,7 @@ def arena_board_data(championship: int, arena_round: int, avatar_addr: str):
     board_data = []
     my_index = random.choice(range(cnt))
     for i in range(cnt):
-        board_data.append(ArenaBoardDataSchema(
+        board_data.append(ArenaParticipantSchema(
             addr=avatar_addr if i == my_index else f"0x{secrets.token_hex(20)}",
             name=f"dummy_{i}",
             level=random.choice(range(300)),

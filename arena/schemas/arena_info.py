@@ -14,9 +14,10 @@ class ArenaInfoSchema(BaseSchema):
     purchased_ticket_count: int
 
 
-class ArenaBoardDataSchema(BaseSchema):
-    addr: str
-    name: str
+
+class ArenaParticipantSchema(BaseSchema):
+    avatar_addr: str
+    # name: str
     level: int
     costume_id: int = 10200000
     title_id: Optional[int] = None
