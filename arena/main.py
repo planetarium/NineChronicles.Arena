@@ -3,6 +3,7 @@ import os
 import uvicorn
 from fastapi import FastAPI
 from mangum import Mangum
+from starlette.responses import FileResponse
 
 from arena import settings, api
 
@@ -27,6 +28,14 @@ def ping():
     This API always returns string "pong" with HTTP status code 200
     """
     return "pong"
+
+
+@app.get("/robots.txt", response_class=FileResponse, tags=["Default"], summary="Returns robots.txt")
+def robots():
+    """
+    This API returns robots.txt
+    """
+    return "arena/robots.txt"
 
 
 app.include_router(api.router)
