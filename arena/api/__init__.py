@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from arena.api import dummy
+from arena.api import dummy, arena
 
 router = APIRouter(
     prefix="/api",
@@ -8,6 +8,7 @@ router = APIRouter(
 )
 
 __all__ = [
+    arena,
     dummy,
 ]
 
