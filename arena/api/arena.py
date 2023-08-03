@@ -15,6 +15,11 @@ router = APIRouter(
 )
 
 
+def verify_arena(sess, championship: int, round: int) -> Tuple[bool, Optional[Arena]]:
+    arena = sess.scalar(select(Arena).where(Arena.championship == championship, Arena.round == round))
+    return arena is not None, arena
+
+
 @router.get("", response_model=ArenaSchema)
 def arena_info(block_index: int = None, championship: int = None, round: int = None, sess=Depends(session)):
     """
@@ -34,9 +39,9 @@ def arena_info(block_index: int = None, championship: int = None, round: int = N
             raise ValueError("Both championship and round are required.")
 
         err_msg = f"No arena of championship {championship} round {round} found."
-        arena = sess.scalar(select(Arena).where(Arena.championship == championship, Arena.round == round))
+        verified, arena = verify_arena(sess, championship, round)
 
-    if not arena:
+    if not verified:
         raise ValueError(err_msg)
 
     return arena
@@ -49,8 +54,8 @@ def arena_participant_list(championship: int, round: int, avatar_addr: str, sess
 
     Get arena participant list around requested avatar.
     """
-    arena = sess.scalar(select(Arena).where(Arena.championship == championship, Arena.round == round))
-    if not arena:
+    verified, arena = verify_arena(sess, championship, round)
+    if not verified:
         raise ValueError(f"No arena of championship {championship} round {round} found.")
 
     avatar_info = sess.scalar(
