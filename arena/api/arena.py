@@ -45,8 +45,8 @@ def arena_info(block_index: int = None, championship: int = None, round: int = N
         err_msg = f"No arena of championship {championship} round {round} found."
         verified, arena = verify_arena(sess, championship, round)
 
-    if not verified:
-        raise ValueError(err_msg)
+        if not verified:
+            raise ValueError(err_msg)
 
     return arena
 
