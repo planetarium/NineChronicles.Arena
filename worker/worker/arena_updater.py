@@ -82,10 +82,7 @@ def join_arena(sess, data: JoinArena3Schema):
             f"Avatar {data.avatarAddress} has already been joined to arena {data.championshipId}:{data.round}")
         return
 
-    start = time()
     avatar_state_schema = get_avatar_state(data.avatarAddress)
-    print(f"{time()-start} for GQL")
-    start = time()
     equipped_items = {decode_item_id(x) for x in (data.equipments + data.costumes)}
 
     arena_info = ArenaInfo(
@@ -163,7 +160,6 @@ def join_arena(sess, data: JoinArena3Schema):
     arena_info.costume_list = costume_list
     arena_info.cp = CPCalculator(sess).get_cp(arena_info)
     sess.add(arena_info)
-    print(f"{time()-start} for DB")
     # sess.commit()
 
 
