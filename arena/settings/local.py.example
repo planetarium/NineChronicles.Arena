@@ -2,5 +2,8 @@
 DEBUG = True
 LOG_LEVEL = "DEBUG"
 
+DB_URI = "[SCHEME]://[ID]:[PW]@[HOST]/[DB]"
+DB_ECHO = True
+
 # AWS
 REGION_NAME = "ap-northeast-2"
