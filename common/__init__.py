@@ -13,7 +13,6 @@ COMMON_LAMBDA_EXCLUDE = [
     "common/pyproject.toml",
 ]
 
-
 try:
     loglevel = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper())
 except AttributeError:
