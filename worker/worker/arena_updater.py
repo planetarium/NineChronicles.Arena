@@ -92,6 +92,7 @@ def join_arena(sess, data: JoinArena3Schema):
         avatar_addr=data.avatarAddress,
         arena_id=target_arena.id,
         agent_addr=avatar_state_schema.agentAddress,
+        name=avatar_state_schema.name,
         level=avatar_state_schema.level,
         character_id=avatar_state_schema.characterId,
     )

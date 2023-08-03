@@ -19,7 +19,7 @@ class ArenaInfoSchema(BaseSchema):
 
 class ArenaParticipantSchema(BaseSchema):
     avatar_addr: str
-    # name: str
+    name: str
     level: int
     costume_id: int = 10200000
     title_id: Optional[int] = None

@@ -12,6 +12,7 @@ class ArenaInfo(AutoIdMixin, Base):
 
     avatar_addr = Column(Text, nullable=False)
     agent_addr = Column(Text)
+    name = Column(Text, nullable=False)
     level = Column(Integer, nullable=False)
     character_id = Column(Integer, nullable=False)
     cp = Column(Integer, nullable=False, default=0, doc="Total CP of this avatar.")
