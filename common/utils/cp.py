@@ -1,20 +1,20 @@
 from decimal import *
 from functools import reduce
-from typing import Optional
+from typing import Optional, List
 
 from sqlalchemy import select
 
 from common.const import INT_MAX
 from common.enums import StatType
 from common.models.avatar import ArenaInfo, Equipment
-from common.models.sheet import CharacterSheet, EquipmentItemSheet, CostumeStatSheet, RuneOptionSheet
+from common.models.sheet import CharacterSheet, CostumeStatSheet, RuneOptionSheet
 
 
 class CPCalculator:
     def __init__(self, sess):
         self.sess = sess
         self.char_data = None
-        self.costume_sheet = None
+        self.costume_data = None
         self.rune_sheet = None
 
         self.avatar: Optional[ArenaInfo] = None
@@ -22,8 +22,11 @@ class CPCalculator:
     def __get_char_data(self, char_id: int):
         self.char_data = self.sess.scalar(select(CharacterSheet).where(CharacterSheet.id == char_id))
 
-    def __get_costume_sheet(self):
-        self.costume_sheet = self.sess.scalars(select(CostumeStatSheet))
+    def __get_costume_data(self, costume_id_list: List[int]):
+        self.costume_data = self.sess.scalars(
+            select(CostumeStatSheet)
+            .where(CostumeStatSheet.costume_id.in_(costume_id_list))
+        )
 
     def __get_rune_sheet(self):
         self.rune_sheet = self.sess.scalars(select(RuneOptionSheet))
@@ -33,8 +36,8 @@ class CPCalculator:
         self.__get_char_data(self.avatar.character_id)
 
         char_cp: Decimal = self._get_char_cp()
-        equipment_cp: Decimal = self._get_equipment_cp()
-        costume_cp: Decimal = Decimal("0")
+        equipment_cp: Decimal = self._get_total_equipment_cp()
+        costume_cp: Decimal = self._get_costume_cp()
         rune_cp: Decimal = Decimal("0")
 
         return min(int(char_cp + equipment_cp + costume_cp + rune_cp), INT_MAX)
@@ -73,14 +76,19 @@ class CPCalculator:
                 )
         )
 
-    def _get_equipment_cp(self) -> Decimal:
+    def _get_total_equipment_cp(self) -> Decimal:
         equipped = [x for x in self.avatar.equipment_list if x.equipped]
-        return reduce(lambda cp, eq: cp + self.__get_equipment_cp(eq), equipped, Decimal("0"))
+        return reduce(lambda cp, eq: cp + self._get_single_equipment_cp(eq), equipped, Decimal("0"))
 
-    def __get_equipment_cp(self, eq: Equipment):
+    def _get_single_equipment_cp(self, eq: Equipment) -> Decimal:
         base_eq_cp = reduce(lambda cp, stat: cp + self.__get_cp(stat.stat_type, stat.stat_value), eq.stats_list,
                             Decimal("0"))
         return self.__apply_skill_multiplier(base_eq_cp, len(eq.all_skill_list))
+
+    def _get_costume_cp(self) -> Decimal:
+        equipped = [x for x in self.avatar.costume_list if x.equipped]
+        self.__get_costume_data([x.sheet_id for x in equipped])
+        return reduce(lambda cp, cos: cp + self.__get_cp(cos.type, cos.value), self.costume_data, Decimal("0"))
 
     def __apply_skill_multiplier(self, base: Decimal, skill_count: int) -> Decimal:
         if skill_count == 0:
