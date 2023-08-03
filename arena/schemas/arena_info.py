@@ -14,7 +14,7 @@ class ArenaInfoSchema(BaseSchema):
     purchased_ticket_count: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ArenaParticipantSchema(BaseSchema):
@@ -28,5 +28,4 @@ class ArenaParticipantSchema(BaseSchema):
     expect_win_score: int = 0
 
     class Config:
-        orm_mode = True
         from_attributes = True

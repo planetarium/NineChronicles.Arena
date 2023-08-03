@@ -11,4 +11,4 @@ class ArenaSchema(BaseSchema):
     end_block_index: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
