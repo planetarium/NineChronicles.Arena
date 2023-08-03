@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from common import logger
 from common.const import HOST_DICT
-from common.enums import SkillType
+from common.enums import SkillType, ItemSubType
 from common.models.arena import Arena
 from common.models.avatar import ArenaInfo, Costume, Equipment, Skill, EquipmentStat
 from common.schemas.action import JoinArena3Schema, BattleArena12Schema
@@ -155,6 +155,12 @@ def join_arena(sess, data: JoinArena3Schema):
             equipped=cos.itemId in equipped_items
         )
         costume_list.append(costume)
+
+        if costume.equipped:
+            if ItemSubType[costume.item_subtype] == ItemSubType.FULL_COSTUME:
+                arena_info.costume_armor_id = costume.sheet_id
+            elif ItemSubType[costume.item_subtype] == ItemSubType.TITLE:
+                arena_info.title_id = costume.sheet_id
 
     arena_info.equipment_list = equipment_list
     arena_info.costume_list = costume_list
