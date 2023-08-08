@@ -2,9 +2,10 @@ from dataclasses import dataclass
 from typing import Dict
 
 from aws_cdk import (
-    Stack,
+    Stack, RemovalPolicy,
     aws_ec2 as _ec2,
     aws_rds as _rds,
+    aws_lambda as _lambda,
 )
 from constructs import Construct
 
@@ -65,4 +66,15 @@ class SharedStack(Stack):
             credentials=self.credentials,
             instance_type=_ec2.InstanceType.of(_ec2.InstanceClass.BURSTABLE4_GRAVITON, _ec2.InstanceSize.MICRO),
             security_groups=[self.rds_security_group],
+        )
+
+        # Lambda Layer
+        self.layer = _lambda.LayerVersion(
+            self, f"{config.stage}-9c-arena-lambda-layer",
+            code=_lambda.AssetCode("layer/"),
+            description="Lambda layer for 9c Arena Service",
+            compatible_runtimes=[
+                _lambda.Runtime.PYTHON_3_10,
+            ],
+            removal_policy=RemovalPolicy.DESTROY,
         )

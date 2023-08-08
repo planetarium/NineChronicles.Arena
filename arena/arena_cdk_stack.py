@@ -20,16 +20,16 @@ class ArenaStack(Stack):
             raise ValueError("Shared stack not found. Please provide shared stack.")
         super().__init__(scope, construct_id, **kwargs)
 
-        # Lambda Layer
-        layer = _lambda.LayerVersion(
-            self, f"{config.stage}-9c-arena-api-lambda-layer",
-            code=_lambda.AssetCode("arena/layer/"),
-            description="Lambda layer for 9c Arena API Service",
-            compatible_runtimes=[
-                _lambda.Runtime.PYTHON_3_10,
-            ],
-            removal_policy=RemovalPolicy.DESTROY,
-        )
+        # # Lambda Layer
+        # layer = _lambda.LayerVersion(
+        #     self, f"{config.stage}-9c-arena-api-lambda-layer",
+        #     code=_lambda.AssetCode("arena/layer/"),
+        #     description="Lambda layer for 9c Arena API Service",
+        #     compatible_runtimes=[
+        #         _lambda.Runtime.PYTHON_3_10,
+        #     ],
+        #     removal_policy=RemovalPolicy.DESTROY,
+        # )
 
         # Lambda Role
         role = _iam.Role(
@@ -72,7 +72,7 @@ class ArenaStack(Stack):
             description="HTTP API/Backoffice service of NineChronicles.Arena",
             code=_lambda.AssetCode(".", exclude=exclude_list),
             handler="arena.main.handler",
-            layers=[layer],
+            layers=[shared_stack.layer],
             role=role,
             vpc=shared_stack.vpc,
             timeout=cdk_core.Duration.seconds(15),
