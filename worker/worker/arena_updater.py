@@ -113,9 +113,12 @@ def join_arena(sess, block: BlockSchema):
             costume_list = []
 
             for eq in avatar_state_schema.inventory.equipments:
+                if eq.itemId not in equipped_items:
+                    continue
+
                 equipment = Equipment(
                     arena_info=arena_info,
-                    id=eq.itemId,
+                    item_id=eq.itemId,
                     sheet_id=eq.id,
                     item_type=eq.itemType,
                     item_subtype=eq.itemSubType,
@@ -124,7 +127,6 @@ def join_arena(sess, block: BlockSchema):
                     set_id=eq.setId,
                     stat_type=eq.stat.statType,
                     stat_value=eq.stat.totalValue,
-                    equipped=eq.itemId in equipped_items
                 )
 
                 stats_list = []
@@ -162,13 +164,15 @@ def join_arena(sess, block: BlockSchema):
                 equipment_list.append(equipment)
 
             for cos in avatar_state_schema.inventory.costumes:
+                if cos.itemId not in equipped_items:
+                    continue
+
                 costume = Costume(
                     arena_info=arena_info,
-                    id=cos.itemId,
+                    item_id=cos.itemId,
                     sheet_id=cos.id,
                     item_type=cos.itemType,
                     item_subtype=cos.itemSubType,
-                    equipped=cos.itemId in equipped_items
                 )
                 costume_list.append(costume)
 

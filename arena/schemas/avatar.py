@@ -33,7 +33,7 @@ class EquipmentStatSchema(BaseSchema):
 
 
 class EquipmentSchema(BaseSchema):
-    id: str
+    item_id: str
     sheet_id: int
     item_type: ItemType
     item_subtype: ItemSubType

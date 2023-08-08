@@ -21,8 +21,6 @@ class ArenaInfo(AutoIdMixin, Base):
     title_id = Column(Integer, nullable=True)
     arena_id = Column(Integer, ForeignKey("arena.id"), nullable=False)
     arena = relationship("Arena", foreign_keys=[arena_id], backref=backref("participant_list"))
-    # championship = Column(Integer, nullable=False)
-    # round = Column(Integer, nullable=False)
     win = Column(Integer, nullable=False, default=0)
     lose = Column(Integer, nullable=False, default=0)
     ticket = Column(Integer, nullable=False, default=0)
@@ -43,13 +41,11 @@ class ArenaInfo(AutoIdMixin, Base):
         }
 
 
-class Equipment(Base):
+class Equipment(AutoIdMixin, Base):
     __tablename__ = "equipment"
-    id = Column(Text, primary_key=True, doc="Unique ID of item. (`itemId` in GQL query result)")
+    item_id = Column(Text, doc="GUID of item. (`itemId` in GQL query result)")
     arena_info_id = Column(Integer, ForeignKey("arena_info.id"), nullable=False)
     arena_info = relationship("ArenaInfo", foreign_keys=[arena_info_id], backref=backref("equipment_list"))
-    # avatar_addr = Column(Text, ForeignKey("arena_info.avatar_addr"), nullable=False)
-    # avatar = relationship("Avatar", foreign_keys=[avatar_addr], backref=backref("equipment_list"))
     sheet_id = Column(Integer, nullable=False, doc="Item id in CSV like 10541000. (`id` in GQL query result)")
     item_type = Column(Enum(ItemType))
     item_subtype = Column(Enum(ItemSubType))
@@ -58,7 +54,6 @@ class Equipment(Base):
     set_id = Column(Integer)
     stat_type = Column(Enum(StatType))
     stat_value = Column(Integer, doc="stat.totalValue in item state")
-    equipped = Column(Boolean, default=False)
 
     @property
     def stats_map(self):
@@ -75,7 +70,7 @@ class Equipment(Base):
 
 class EquipmentStat(AutoIdMixin, Base):
     __tablename__ = "equipment_stat"
-    equipment_id = Column(Text, ForeignKey("equipment.id"), nullable=False)
+    equipment_id = Column(Integer, ForeignKey("equipment.id"), nullable=False)
     equipment = relationship("Equipment", foreign_keys=[equipment_id], backref=backref("stats_list"))
     stat_type = Column(Enum(StatType), nullable=False)
     stat_value = Column(Integer, nullable=False)
@@ -84,7 +79,7 @@ class EquipmentStat(AutoIdMixin, Base):
 class Skill(AutoIdMixin, Base):
     __tablename__ = "skill"
     type = Column(Enum(SkillType), nullable=False)
-    equipment_id = Column(Text, ForeignKey("equipment.id"), nullable=False)
+    equipment_id = Column(Integer, ForeignKey("equipment.id"), nullable=False)
     equipment = relationship("Equipment", foreign_keys=[equipment_id], backref=backref("all_skill_list"))
     skill_id = Column(Integer, nullable=False)
     referenced_stat_type = Column(Enum(StatType))
@@ -93,14 +88,23 @@ class Skill(AutoIdMixin, Base):
     chance = Column(Integer)
 
 
-class Costume(Base):
+class Costume(AutoIdMixin, Base):
     __tablename__ = "costume"
-    id = Column(Text, primary_key=True, doc="Unique ID of costume. (`itemId` in GQL query result)")
-    # avatar_addr = Column(Text, ForeignKey("arena_info.avatar_addr"), nullable=False)
-    # avatar = relationship("Avatar", foreign_keys=[avatar_addr], backref=backref("costume_list"))
+    item_id = Column(Text, doc="GUID of costume. (`itemId` in GQL query result)")
     arena_info_id = Column(Integer, ForeignKey("arena_info.id"), nullable=False)
     arena_info = relationship("ArenaInfo", foreign_keys=[arena_info_id], backref=backref("costume_list"))
     sheet_id = Column(Integer, nullable=False, doc="Item id in CSV like 40100000. (`id` in GQL query result)")
     item_type = Column(Enum(ItemType))
     item_subtype = Column(Enum(ItemSubType))
-    equipped = Column(Boolean, default=False)
+
+
+class Rune(AutoIdMixin, Base):
+    __tablename__ = "rune"
+    rune_id = Column(Integer, nullable=False)
+    level = Column(Integer, nullable=False)
+    arena_info_id = Column(Integer, ForeignKey("arena_info.id"), nullable=False)
+    arena_info = relationship("ArenaInfo", foreign_keys=[arena_info_id], backref=backref("rune_list"))
+
+    __table_args__ = (
+        Index("rune_id_level_idx", "rune_id", "level"),
+    )
