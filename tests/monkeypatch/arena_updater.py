@@ -1,8 +1,10 @@
+from typing import List
+
 from common.schemas.avatar import AvatarStateSchema
 
 
-def mock_get_avatar_state(avatar_addr: str) -> AvatarStateSchema:
-    return AvatarStateSchema(
+def mock_get_avatar_state(avatar_addr_list: List[str]) -> List[AvatarStateSchema]:
+    return [AvatarStateSchema(
         **{
             "address": "0x211939355049999363383840912",
             "agentAddress": "0x81291023468377205534914161158",
@@ -397,4 +399,4 @@ def mock_get_avatar_state(avatar_addr: str) -> AvatarStateSchema:
                 ]
             }
         }
-    )
+    )]
