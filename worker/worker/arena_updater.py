@@ -9,7 +9,7 @@ from common import logger
 from common.const import HOST_DICT
 from common.enums import SkillType, ItemSubType
 from common.models.arena import Arena
-from common.models.avatar import ArenaInfo, Costume, Equipment, Skill, EquipmentStat
+from common.models.avatar import ArenaInfo, Costume, Equipment, Skill, EquipmentStat, Rune
 from common.schemas.avatar import AvatarStateSchema
 from common.schemas.block import BlockSchema
 from common.utils.cp import CPCalculator
@@ -53,6 +53,9 @@ def get_avatar_state(avatar_addr_list: List[str]) -> List[AvatarStateSchema]:
                 costumes {{
                     id itemType itemSubType itemId equipped
                 }}
+            }}
+            runes {{
+                runeId level
             }}
         }}
     }}
@@ -182,8 +185,22 @@ def join_arena(sess, block: BlockSchema):
                     elif ItemSubType[costume.item_subtype] == ItemSubType.TITLE:
                         arena_info.title_id = costume.sheet_id
 
+            equipped_runes = [x[1] for x in data.runeInfos]
+            rune_list = []
+            for rune in avatar_state_schema.runes:
+                if rune.runeId not in equipped_runes:
+                    continue
+                rune_list.append(
+                    Rune(
+                        arena_info=arena_info,
+                        rune_id=rune.runeId,
+                        level=rune.level
+                    )
+                )
+
             arena_info.equipment_list = equipment_list
             arena_info.costume_list = costume_list
+            arena_info.rune_list = rune_list
             arena_info.cp = CPCalculator(sess).get_cp(arena_info)
             sess.add(arena_info)
 
