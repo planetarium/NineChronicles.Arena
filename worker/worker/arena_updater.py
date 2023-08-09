@@ -2,7 +2,7 @@ import json
 import os
 import random
 from collections import defaultdict
-from typing import List
+from typing import List, Dict
 from uuid import UUID
 
 from common import logger
@@ -10,6 +10,7 @@ from common.const import HOST_DICT
 from common.enums import SkillType, ItemSubType
 from common.models.arena import Arena
 from common.models.avatar import ArenaInfo, Costume, Equipment, Skill, EquipmentStat, Rune
+from common.schemas.arena import ArenaInformationSchema
 from common.schemas.avatar import AvatarStateSchema
 from common.schemas.block import BlockSchema
 from common.utils.cp import CPCalculator
@@ -20,6 +21,7 @@ stage = os.environ.get("STAGE", "development")
 HOST = random.choice(HOST_DICT[stage])
 JOIN_ARENA_ACTION = {"join_arena3", }
 BATTLE_ARENA_ACTION = {"battle_arena12", }
+TARGET_ACTION_LIST = JOIN_ARENA_ACTION | BATTLE_ARENA_ACTION
 
 
 def decode_item_id(encoded: str) -> str:
@@ -65,19 +67,42 @@ def get_avatar_state(avatar_addr_list: List[str]) -> List[AvatarStateSchema]:
     return [AvatarStateSchema(**x) for x in resp["stateQuery"]["avatars"] if x is not None]
 
 
-def join_arena(sess, block: BlockSchema):
+def get_arena_state(championship: int, round: int, avatar_addr_list: List[str]) -> List[ArenaInformationSchema]:
+    query = f"""{{
+        stateQuery {{
+            arenaInformation(
+                championshipId: {championship}
+                round: {round}
+                avatarAddresses: {json.dumps(avatar_addr_list)}
+            ) {{
+                avatarAddress
+                address
+                win
+                lose
+                score
+                ticket
+                ticketResetCount
+                purchasedTicketCount
+            }}
+        }}
+    }}"""
+    resp = execute_gql(f"{HOST}/graphql", query)
+    return [ArenaInformationSchema(**x) for x in resp["stateQuery"]["arenaInformation"] if x is not None]
+
+
+def update_arena_info(sess, block: BlockSchema):
     data_dict = defaultdict(dict)
     equipped_items = set()
     for tx in block.transactions:
         for action in tx.actions:
-            if action.type_id in JOIN_ARENA_ACTION:
+            if action.type_id in TARGET_ACTION_LIST:
                 # Separate action data by championship-round
-                data_dict[(action.values.championshipId, action.values.round)][
+                data_dict[(action.values.championshipId, action.values.round, action.type_id)][
                     action.values.avatarAddress] = action.values
                 # All item ids are unique, so we can handle them at once
                 equipped_items |= {decode_item_id(x) for x in (action.values.equipments + action.values.costumes)}
 
-    for (championship, round), address_dict in data_dict.items():
+    for (championship, round, action_type), action_dict in data_dict.items():
         # Cut invalid arena
         target_arena = sess.scalar(
             select(Arena).where(Arena.championship == championship, Arena.round == round)
@@ -86,36 +111,53 @@ def join_arena(sess, block: BlockSchema):
             msg = f"There is no Arena of Championship {championship} Round {round}"
             logger.error(msg)
             continue
-            # raise ValueError(msg)
 
-        # Cut previously joined avatars
-        prev_info = sess.scalars(
-            select(ArenaInfo.avatar_addr)
-            .where(ArenaInfo.arena_id == target_arena.id, ArenaInfo.avatar_addr.in_(list(address_dict.keys())))
-        ).fetchall()
-        for prev in prev_info:
-            del address_dict[prev]
-        logger.info(f"{len(address_dict)} new avatars joined to the arena")
-        if not address_dict:
-            continue
+        arena_dict: Dict[str, ArenaInfo] = {
+            x.avatar_addr: x for x in sess.scalars(
+                select(ArenaInfo)
+                .where(ArenaInfo.arena_id == target_arena.id, ArenaInfo.avatar_addr.in_(list(action_dict.keys())))
+            ).fetchall()
+        }
+        if action_type in JOIN_ARENA_ACTION:
+            # Remove prev. joined avatars
+            action_dict = {k: v for k, v in action_dict.items() if k not in arena_dict}
+            logger.info(f"{len(action_dict)} new avatars joined to the arena")
+            if not action_dict:
+                continue
+        else:  # BATTLE_ARENA_ACTION
+            # Remove not joined avatars
+            action_dict = {k: v for k, v in action_dict.items() if k in arena_dict}
+            logger.info(f"{len(action_dict)} avatars battled in the arena")
+            if not action_dict:
+                continue
 
-        # Get all avatar states
-        avatar_state_schema_list = get_avatar_state(list(address_dict.keys()))
-        for avatar_state_schema in avatar_state_schema_list:
-            data = address_dict[avatar_state_schema.address.lower()]
-            arena_info = ArenaInfo(
-                avatar_addr=data.avatarAddress,
-                arena_id=target_arena.id,
-                agent_addr=avatar_state_schema.agentAddress,
-                name=avatar_state_schema.name,
-                level=avatar_state_schema.level,
-                character_id=avatar_state_schema.characterId,
-            )
+        avatar_state_dict = {x.address: x for x in get_avatar_state(list(action_dict.keys()))}
+        arena_state_dict = {x.avatarAddress: x for x in get_arena_state(championship, round, list(action_dict.keys()))}
 
+        for addr, action_value in action_dict.items():
+            arena_info = arena_dict.get(addr.lower())
+            avatar_state = avatar_state_dict[addr.lower()]
+            arena_state = arena_state_dict.get(addr.lower())
+            if not arena_info:
+                # JoinArena
+                arena_info = ArenaInfo(
+                    avatar_addr=action_value.avatarAddress,
+                    arena_id=target_arena.id,
+                    agent_addr=avatar_state.agentAddress,
+                    name=avatar_state.name,
+                    level=avatar_state.level,
+                    character_id=avatar_state.characterId,
+                )
+
+            # Apply arena result
+            if arena_state:
+                arena_info.update_arena_info(arena_state)
+
+            # Update avatar state
             equipment_list = []
             costume_list = []
 
-            for eq in avatar_state_schema.inventory.equipments:
+            for eq in avatar_state.inventory.equipments:
                 if eq.itemId not in equipped_items:
                     continue
 
@@ -166,7 +208,7 @@ def join_arena(sess, block: BlockSchema):
                 equipment.all_skill_list = skill_list
                 equipment_list.append(equipment)
 
-            for cos in avatar_state_schema.inventory.costumes:
+            for cos in avatar_state.inventory.costumes:
                 if cos.itemId not in equipped_items:
                     continue
 
@@ -179,15 +221,14 @@ def join_arena(sess, block: BlockSchema):
                 )
                 costume_list.append(costume)
 
-                if costume.equipped:
-                    if ItemSubType[costume.item_subtype] == ItemSubType.FULL_COSTUME:
-                        arena_info.costume_armor_id = costume.sheet_id
-                    elif ItemSubType[costume.item_subtype] == ItemSubType.TITLE:
-                        arena_info.title_id = costume.sheet_id
+                if ItemSubType[costume.item_subtype] == ItemSubType.FULL_COSTUME:
+                    arena_info.costume_armor_id = costume.sheet_id
+                elif ItemSubType[costume.item_subtype] == ItemSubType.TITLE:
+                    arena_info.title_id = costume.sheet_id
 
-            equipped_runes = [x[1] for x in data.runeInfos]
+            equipped_runes = [x[1] for x in action_value.runeInfos]
             rune_list = []
-            for rune in avatar_state_schema.runes:
+            for rune in avatar_state.runes:
                 if rune.runeId not in equipped_runes:
                     continue
                 rune_list.append(
@@ -205,16 +246,7 @@ def join_arena(sess, block: BlockSchema):
             sess.add(arena_info)
 
 
-def battle_arena(sess, block: BlockSchema):
-    # battle_arena12
-    # update my avatar's equipments, costumes
-    # update CP
-    # update win/lose/score
-    # update ranking(?)
-    pass
-
-
-def update_arena_info(sess, block_data: List[BlockSchema]):
+def apply_arena_actions(sess, block_data: List[BlockSchema]):
     for block in block_data:
         print(f"Searching in block {block.index}...")
         action_set = set()
@@ -222,17 +254,7 @@ def update_arena_info(sess, block_data: List[BlockSchema]):
             for action in tx.actions:
                 action_set.add(action.type_id)
 
-        if action_set & JOIN_ARENA_ACTION:
-            join_arena(sess, block)
-        if action_set & BATTLE_ARENA_ACTION:
-            battle_arena(sess, block)
+        if action_set & TARGET_ACTION_LIST:
+            update_arena_info(sess, block)
 
-            # if action.type_id == "join_arena3":
-            #     print("join_arena found")
-            #     start = time()
-            #     join_arena(sess, action.values)
-            #     print(f"{time() - start} elapsed")
-            # if action.type_id == "battle_arena12":
-            #     # print("battle_arena found")
-            #     battle_arena(sess, action.values)
     # sess.commit()

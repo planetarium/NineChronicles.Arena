@@ -11,7 +11,7 @@ from common.utils.gql import execute_gql
 from sqlalchemy import create_engine, select, desc
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-from arena_updater import update_arena_info
+from arena_updater import apply_arena_actions
 from table_patch import apply_patch_table
 
 MAX_BLOCKS_PER_REQUEST = 10
@@ -87,7 +87,7 @@ def handle(event, context):
         last_block_index = sess.scalar(select(Block.index).order_by(desc(Block.index)))
         block_data = fetch_blocks(random.choice(HOST_DICT[stage]), start=last_block_index, limit=10)
         # DISCUSS: Should these 3 functions be atomic DB transaction?
-        update_arena_info(sess, block_data)
+        apply_arena_actions(sess, block_data)
         apply_patch_table(sess, block_data)
         update_block(sess, block_data)
         sess.commit()
