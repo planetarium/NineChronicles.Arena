@@ -10,8 +10,8 @@ from sqlalchemy.orm import joinedload
 from common.models.avatar import ArenaInfo
 from common.schemas.action import JoinArena3Schema
 from common.schemas.block import BlockSchema
-from tests.monkeypatch.arena_updater import mock_get_avatar_state
-from worker.worker.arena_updater import join_arena, decode_item_id
+from tests.monkeypatch.arena_updater import mock_get_avatar_state, mock_get_arena_information
+from worker.worker.arena_updater import decode_item_id, update_arena_info
 
 TEST_JOIN_ARENA_DATA = {
     "id": "0xe5d183536215c34e929d963f060f0f1c",
@@ -39,9 +39,10 @@ def generate_block(data: Dict) -> BlockSchema:
 @pytest.mark.usefixtures("session", "setup")
 def test_adding_new_join_arena(session, monkeypatch):
     monkeypatch.setattr("worker.worker.arena_updater.get_avatar_state", mock_get_avatar_state)
+    monkeypatch.setattr("worker.worker.arena_updater.get_arena_state", mock_get_arena_information)
     test_data = JoinArena3Schema(**TEST_JOIN_ARENA_DATA)
     test_block = generate_block(TEST_JOIN_ARENA_DATA)
-    join_arena(session, test_block)
+    update_arena_info(session, test_block)
 
     expected_equipped = {decode_item_id(x) for x in (test_data.equipments + test_data.costumes)}
 
@@ -55,23 +56,22 @@ def test_adding_new_join_arena(session, monkeypatch):
     assert data.arena.round == test_data.round
 
     for eq in data.equipment_list:
-        if eq.equipped:
-            assert eq.id in expected_equipped
-            expected_equipped.remove(eq.id)
+        assert eq.item_id in expected_equipped
+        expected_equipped.remove(eq.item_id)
     for cos in data.costume_list:
-        if cos.equipped:
-            assert cos.id in expected_equipped
-            expected_equipped.remove(cos.id)
+        assert cos.item_id in expected_equipped
+        expected_equipped.remove(cos.item_id)
     assert len(expected_equipped) == 0
 
 
 @pytest.mark.usefixtures("session", "setup")
 def test_adding_existing_avatar(session, monkeypatch):
     monkeypatch.setattr("worker.worker.arena_updater.get_avatar_state", mock_get_avatar_state)
+    monkeypatch.setattr("worker.worker.arena_updater.get_arena_state", mock_get_arena_information)
     test_block = generate_block(TEST_JOIN_ARENA_DATA)
-    join_arena(session, test_block)
+    update_arena_info(session, test_block)
     # This must be ignored
-    join_arena(session, test_block)
+    update_arena_info(session, test_block)
 
     count = session.scalar(select(func.count(ArenaInfo.id)))
     assert count == 1
@@ -81,14 +81,15 @@ def test_adding_existing_avatar(session, monkeypatch):
 def test_adding_wrong_arena(session, monkeypatch):
     prev_count = session.scalar(select(func.count(ArenaInfo.id)))
     monkeypatch.setattr("worker.worker.arena_updater.get_avatar_state", mock_get_avatar_state)
+    monkeypatch.setattr("worker.worker.arena_updater.get_arena_state", mock_get_arena_information)
     test_arena_data = deepcopy(TEST_JOIN_ARENA_DATA)
     test_arena_data["round"] = 99
     test_block = generate_block(test_arena_data)
-    join_arena(session, test_block)
+    update_arena_info(session, test_block)
 
     count = session.scalar(select(func.count(ArenaInfo.id)))
     assert count == prev_count
 
     # with pytest.raises(ValueError) as e:
-    #     join_arena(session, test_block)
+    #     update_arena_info(session, test_block)
     #     assert str(e) == f"There is no Arena of Championship {test_data.championshipId} Round {test_data.round}"
