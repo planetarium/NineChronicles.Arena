@@ -1,3 +1,4 @@
+import concurrent.futures
 import json
 import os
 import random
@@ -139,13 +140,31 @@ def update_arena_info(sess, block: BlockSchema):
                 continue
 
         start = time()
-        avatar_state_dict = {x.address.lower(): x for x in get_avatar_state(list(action_dict.keys()))}
-        logger.debug(f"{time() - start} elapsed for Avatar GQL")
-        start = time()
-        arena_state_dict = {x.avatarAddress.lower(): x for x in
-                            get_arena_state(championship, round, list(action_dict.keys()))
-                            if x.address is not None
-                            }
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            gql_futures = {
+                executor.submit(get_avatar_state, list(action_dict.keys())): "avatar",
+                executor.submit(get_arena_state, championship, round, list(action_dict.keys())): "arena"
+            }
+
+            for future in concurrent.futures.as_completed(gql_futures):
+                _type = gql_futures[future]
+                try:
+                    result = future.result()
+                    if _type == "avatar":
+                        avatar_state_dict = {x.address.lower(): x for x in result}
+                    else:  # "arena"
+                        arena_state_dict = {x.avatarAddress.lower(): x for x in result if x.address is not None}
+                except Exception as e:
+                    logger.erorr(f"Exception occurred during GQL: {e}")
+                    raise e
+
+        # avatar_state_dict = {x.address.lower(): x for x in get_avatar_state(list(action_dict.keys()))}
+        # logger.debug(f"{time() - start} elapsed for Avatar GQL")
+        # start = time()
+        # arena_state_dict = {x.avatarAddress.lower(): x for x in
+        #                     get_arena_state(championship, round, list(action_dict.keys()))
+        #                     if x.address is not None
+        #                     }
         logger.debug(f"{time() - start} elapsed for Arena GQL")
 
         for addr, action_value in action_dict.items():
