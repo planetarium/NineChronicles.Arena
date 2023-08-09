@@ -90,7 +90,7 @@ class CPCalculator:
 
     def _get_rune_cp(self) -> Decimal:
         self.__get_rune_data()
-        return reduce(lambda cp, rune: cp + self.__rune_data[(rune.item_id, rune.level)], self.__rune_data,
+        return reduce(lambda cp, rune: cp + self.__rune_data[(rune.rune_id, rune.level)], self.avatar.rune_list,
                       Decimal("0"))
 
     def __apply_skill_multiplier(self, base: Decimal, skill_count: int) -> Decimal:
