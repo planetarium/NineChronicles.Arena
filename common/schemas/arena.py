@@ -1,13 +1,14 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
 class ArenaInformationSchema:
     avatarAddress: str
-    address: str
-    win: int
-    lose: int
-    score: int
-    ticket: int
-    ticketResetCount: int
-    purchasedTicketCount: int
+    address: Optional[str]
+    win: Optional[int]
+    lose: Optional[int]
+    score: Optional[int]
+    ticket: Optional[int]
+    ticketResetCount: Optional[int]
+    purchasedTicketCount: Optional[int]
