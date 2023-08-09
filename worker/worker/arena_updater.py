@@ -2,6 +2,7 @@ import json
 import os
 import random
 from collections import defaultdict
+from time import time
 from typing import List, Dict
 from uuid import UUID
 
@@ -16,6 +17,7 @@ from common.schemas.block import BlockSchema
 from common.utils.cp import CPCalculator
 from common.utils.gql import execute_gql
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 stage = os.environ.get("STAGE", "development")
 HOST = random.choice(HOST_DICT[stage])
@@ -103,6 +105,7 @@ def update_arena_info(sess, block: BlockSchema):
                 equipped_items |= {decode_item_id(x) for x in (action.values.equipments + action.values.costumes)}
 
     for (championship, round, action_type), action_dict in data_dict.items():
+        logger.info(f"Applying Arena {championship}:{round} with action {action_type}")
         # Cut invalid arena
         target_arena = sess.scalar(
             select(Arena).where(Arena.championship == championship, Arena.round == round)
@@ -111,33 +114,48 @@ def update_arena_info(sess, block: BlockSchema):
             msg = f"There is no Arena of Championship {championship} Round {round}"
             logger.error(msg)
             continue
-
+        start = time()
         arena_dict: Dict[str, ArenaInfo] = {
             x.avatar_addr: x for x in sess.scalars(
                 select(ArenaInfo)
+                .options(joinedload(ArenaInfo.equipment_list).joinedload(Equipment.stats_list))
+                .options(joinedload(ArenaInfo.equipment_list).joinedload(Equipment.all_skill_list))
+                .options(joinedload(ArenaInfo.costume_list))
                 .where(ArenaInfo.arena_id == target_arena.id, ArenaInfo.avatar_addr.in_(list(action_dict.keys())))
-            ).fetchall()
+            ).unique().fetchall()
         }
+        logger.debug(f"{time() - start} elapsed for DB query")
         if action_type in JOIN_ARENA_ACTION:
             # Remove prev. joined avatars
             action_dict = {k: v for k, v in action_dict.items() if k not in arena_dict}
-            logger.info(f"{len(action_dict)} new avatars joined to the arena")
+            logger.info(f"{len(action_dict)} new avatars joined to the arena {championship}:{round}")
             if not action_dict:
                 continue
         else:  # BATTLE_ARENA_ACTION
             # Remove not joined avatars
             action_dict = {k: v for k, v in action_dict.items() if k in arena_dict}
-            logger.info(f"{len(action_dict)} avatars battled in the arena")
+            logger.info(f"{len(action_dict)} avatars battled in the arena {championship}:{round}")
             if not action_dict:
                 continue
 
-        avatar_state_dict = {x.address: x for x in get_avatar_state(list(action_dict.keys()))}
-        arena_state_dict = {x.avatarAddress: x for x in get_arena_state(championship, round, list(action_dict.keys()))}
+        start = time()
+        avatar_state_dict = {x.address.lower(): x for x in get_avatar_state(list(action_dict.keys()))}
+        logger.debug(f"{time() - start} elapsed for Avatar GQL")
+        start = time()
+        arena_state_dict = {x.avatarAddress.lower(): x for x in
+                            get_arena_state(championship, round, list(action_dict.keys()))
+                            if x.address is not None
+                            }
+        logger.debug(f"{time() - start} elapsed for Arena GQL")
 
         for addr, action_value in action_dict.items():
-            arena_info = arena_dict.get(addr.lower())
-            avatar_state = avatar_state_dict[addr.lower()]
-            arena_state = arena_state_dict.get(addr.lower())
+            arena_info = arena_dict.get(addr)
+            avatar_state = avatar_state_dict[addr]
+            arena_state = arena_state_dict.get(addr)
+            if not arena_state:
+                logger.warning(f"Avatar {addr} has no Arena State. Skip this avatar...")
+                continue
+
             if not arena_info:
                 # JoinArena
                 arena_info = ArenaInfo(
@@ -155,100 +173,141 @@ def update_arena_info(sess, block: BlockSchema):
 
             # Update avatar state
             equipment_list = []
-            costume_list = []
+            equipment_dict = {x.item_id: x for x in arena_info.equipment_list}
 
             for eq in avatar_state.inventory.equipments:
                 if eq.itemId not in equipped_items:
                     continue
-
-                equipment = Equipment(
-                    arena_info=arena_info,
-                    item_id=eq.itemId,
-                    sheet_id=eq.id,
-                    item_type=eq.itemType,
-                    item_subtype=eq.itemSubType,
-                    elemental_type=eq.elementalType,
-                    level=eq.level,
-                    set_id=eq.setId,
-                    stat_type=eq.stat.statType,
-                    stat_value=eq.stat.totalValue,
-                )
+                try:
+                    equipment = equipment_dict.pop(eq.itemId)
+                except KeyError:
+                    equipment = Equipment(
+                        arena_info=arena_info,
+                        item_id=eq.itemId,
+                        sheet_id=eq.id,
+                        item_type=eq.itemType,
+                        item_subtype=eq.itemSubType,
+                        elemental_type=eq.elementalType,
+                        set_id=eq.setId,
+                    )
+                equipment.level = eq.level
+                equipment.stat_type = eq.stat.statType
+                equipment.stat_value = eq.stat.totalValue
 
                 stats_list = []
+                stats_dict = {x.stat_type: x for x in equipment.stats_list}
                 for stat_type, stat_value in eq.stats_map.items():
                     if stat_value != 0:
-                        stats_list.append(EquipmentStat(
-                            equipment=equipment,
-                            stat_type=stat_type,
-                            stat_value=stat_value
-                        ))
+                        try:
+                            stat = stats_dict.pop(stat_type)
+                        except KeyError:
+                            stat = EquipmentStat(
+                                equipment=equipment,
+                                stat_type=stat_type
+                            )
+                        stat.stat_value = stat_value
+                        stats_list.append(stat)
+
+                for s in stats_dict.values():
+                    sess.delete(s)
                 equipment.stats_list = stats_list
 
                 skill_list = []
+                skill_dict = {x.id: x for x in equipment.all_skill_list}
                 for skill in eq.skills:
-                    skill_list.append(Skill(
-                        type=SkillType.SKILL,
-                        equipment=equipment,
-                        skill_id=skill.id,
-                        referenced_stat_type=skill.referencedStatType,
-                        stat_power_ratio=skill.statPowerRatio,
-                        power=skill.power,
-                        chance=skill.chance,
-                    ))
+                    try:
+                        sk = skill_dict.pop(skill.id)
+                    except KeyError:
+                        sk = Skill(
+                            type=SkillType.SKILL,
+                            equipment=equipment,
+                            skill_id=skill.id,
+                            referenced_stat_type=skill.referencedStatType,
+                        )
+                    sk.stat_power_ratio = skill.statPowerRatio
+                    sk.power = skill.power
+                    sk.chance = skill.chance
+                    skill_list.append(sk)
+
                 for buff in eq.buffSkills:
-                    skill_list.append(Skill(
-                        type=SkillType.BUFF_SKILL,
-                        equipment=equipment,
-                        skill_id=buff.id,
-                        referenced_stat_type=buff.referencedStatType,
-                        stat_power_ratio=buff.statPowerRatio,
-                        power=buff.power,
-                        chance=buff.chance,
-                    ))
+                    try:
+                        bf = skill_dict.pop(buff.id)
+                    except KeyError:
+                        bf = Skill(
+                            type=SkillType.BUFF_SKILL,
+                            equipment=equipment,
+                            skill_id=buff.id,
+                            referenced_stat_type=buff.referencedStatType,
+                        )
+                    bf.stat_power_ratio = buff.statPowerRatio
+                    bf.power = buff.power
+                    bf.chance = buff.chance
+                    skill_list.append(bf)
+                for b in skill_dict.values():
+                    sess.delete(b)
+
                 equipment.all_skill_list = skill_list
                 equipment_list.append(equipment)
+
+            for e in equipment_dict.values():
+                sess.delete(e)
+            arena_info.equipment_list = equipment_list
+
+            costume_list = []
+            costume_dict = {x.item_id: x for x in arena_info.costume_list}
 
             for cos in avatar_state.inventory.costumes:
                 if cos.itemId not in equipped_items:
                     continue
-
-                costume = Costume(
-                    arena_info=arena_info,
-                    item_id=cos.itemId,
-                    sheet_id=cos.id,
-                    item_type=cos.itemType,
-                    item_subtype=cos.itemSubType,
-                )
+                try:
+                    costume = costume_dict.pop(cos.itemId)
+                except KeyError:
+                    costume = Costume(
+                        arena_info=arena_info,
+                        item_id=cos.itemId,
+                        sheet_id=cos.id,
+                        item_type=cos.itemType,
+                        item_subtype=cos.itemSubType,
+                    )
                 costume_list.append(costume)
 
-                if ItemSubType[costume.item_subtype] == ItemSubType.FULL_COSTUME:
+                if costume.item_subtype == ItemSubType.FULL_COSTUME:
                     arena_info.costume_armor_id = costume.sheet_id
-                elif ItemSubType[costume.item_subtype] == ItemSubType.TITLE:
+                elif costume.item_subtype == ItemSubType.TITLE:
                     arena_info.title_id = costume.sheet_id
 
-            equipped_runes = [x[1] for x in action_value.runeInfos]
+            for c in costume_dict.values():
+                sess.delete(c)
+            arena_info.costume_list = costume_list
+
+            equipped_runes = [int(x[1]) for x in action_value.runeInfos]
             rune_list = []
+            rune_dict = {x.rune_id: x for x in arena_info.rune_list}
             for rune in avatar_state.runes:
                 if rune.runeId not in equipped_runes:
                     continue
-                rune_list.append(
-                    Rune(
+
+                try:
+                    rn = rune_dict.pop(rune.runeId)
+                except KeyError:
+                    rn = Rune(
                         arena_info=arena_info,
                         rune_id=rune.runeId,
-                        level=rune.level
                     )
-                )
 
-            arena_info.equipment_list = equipment_list
-            arena_info.costume_list = costume_list
+                rn.level = rune.level
+                rune_list.append(rn)
+            for r in rune_dict.values():
+                sess.delete(r)
             arena_info.rune_list = rune_list
+
             arena_info.cp = CPCalculator(sess).get_cp(arena_info)
             sess.add(arena_info)
 
 
 def apply_arena_actions(sess, block_data: List[BlockSchema]):
     for block in block_data:
-        print(f"Searching in block {block.index}...")
+        logger.info(f"Searching in block {block.index}...")
         action_set = set()
         for tx in block.transactions:
             for action in tx.actions:

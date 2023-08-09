@@ -1,5 +1,6 @@
 import os
 import random
+from time import time
 from typing import List, Optional
 
 from common import logger
@@ -77,6 +78,7 @@ def update_block(sess, block_data: List[BlockSchema]):
         sess.add(Block(index=block.index, hash=block.hash, timestamp=block.timestamp))
     sess.commit()
     logger.info(f"{len(block_data)} blocks are updated. The last block index is: {max([x.index for x in block_data])}")
+    return max([x.index for x in block_data])
 
 
 def handle(event, context):
