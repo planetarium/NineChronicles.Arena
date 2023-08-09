@@ -31,7 +31,7 @@ def get_avatar_state(avatar_addr_list: List[str]) -> List[AvatarStateSchema]:
     query = f"""{{
     stateQuery {{
         avatars (
-            avatarAddresses: {json.dumps(avatar_addr_list)}
+            addresses: {json.dumps(avatar_addr_list)}
         ) {{
             address agentAddress name level characterId
             inventory {{
