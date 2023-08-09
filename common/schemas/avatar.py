@@ -99,7 +99,8 @@ class AvatarStateSchema:
     level: int
     characterId: int
     inventory: Union[Dict, InventorySchema]
-    runes: List[RuneSchema]
+    runes: Union[List[Dict], List[RuneSchema]]
 
     def __post_init__(self):
         self.inventory = InventorySchema(**self.inventory)
+        self.runes = [RuneSchema(**x) for x in self.runes]
