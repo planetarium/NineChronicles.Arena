@@ -36,6 +36,30 @@ class BattleArena12Schema(BaseActionValueSchema):
     eaa: str  # Enemy avatar address
     tk: int  # Ticket
 
+    @property
+    def championshipId(self):
+        return self.chi
+
+    @property
+    def round(self):
+        return self.rd
+
+    @property
+    def avatarAddress(self):
+        return self.maa
+
+    @property
+    def equipments(self):
+        return self.es
+
+    @property
+    def costumes(self):
+        return self.cs
+
+    @property
+    def runeInfos(self):
+        return self.ri
+
 
 @dataclass
 class ActionSchema:
