@@ -1,4 +1,4 @@
-from sqlalchemy import Text, Column, ForeignKey, Integer, Index, Enum, Boolean
+from sqlalchemy import Text, Column, ForeignKey, Integer, Index, Enum
 from sqlalchemy.orm import backref, relationship
 
 from common.const import ARENA_START_SCORE
@@ -80,7 +80,8 @@ class Equipment(AutoIdMixin, Base):
 class EquipmentStat(AutoIdMixin, Base):
     __tablename__ = "equipment_stat"
     equipment_id = Column(Integer, ForeignKey("equipment.id"), nullable=False)
-    equipment = relationship("Equipment", foreign_keys=[equipment_id], backref=backref("stats_list"))
+    equipment = relationship("Equipment", foreign_keys=[equipment_id],
+                             backref=backref("stats_list", cascade="all, delete"))
     stat_type = Column(Enum(StatType), nullable=False)
     stat_value = Column(Integer, nullable=False)
 
@@ -89,7 +90,8 @@ class Skill(AutoIdMixin, Base):
     __tablename__ = "skill"
     type = Column(Enum(SkillType), nullable=False)
     equipment_id = Column(Integer, ForeignKey("equipment.id"), nullable=False)
-    equipment = relationship("Equipment", foreign_keys=[equipment_id], backref=backref("all_skill_list"))
+    equipment = relationship("Equipment", foreign_keys=[equipment_id],
+                             backref=backref("all_skill_list", cascade="all, delete"))
     skill_id = Column(Integer, nullable=False)
     referenced_stat_type = Column(Enum(StatType))
     stat_power_ratio = Column(Integer)
