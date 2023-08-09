@@ -4,6 +4,7 @@ from sqlalchemy.orm import backref, relationship
 from common.const import ARENA_START_SCORE
 from common.enums import StatType, ItemSubType, ItemType, ElementalType, SkillType
 from common.models.base import Base, AutoIdMixin
+from common.schemas.arena import ArenaInformationSchema
 
 
 class ArenaInfo(AutoIdMixin, Base):
@@ -39,6 +40,14 @@ class ArenaInfo(AutoIdMixin, Base):
             "equipment_list": self.equipment_list,
             "costume_list": self.costume_list,
         }
+
+    def update_arena_info(self, result: ArenaInformationSchema):
+        self.win = result.win
+        self.lose = result.lose
+        self.score = result.score
+        self.ticket = result.ticket
+        self.ticket_reset_count = result.ticketResetCount
+        self.purchased_ticket_count = result.purchasedTicketCount
 
 
 class Equipment(AutoIdMixin, Base):
