@@ -49,7 +49,6 @@ class EquipmentSchema:
     level: int
     itemId: str
     setId: int
-    equipped: bool
     stat: Union[Dict, StatSchema]
     skills: Union[List[Dict], List[SkillSchema]]
     buffSkills: Union[List[Dict], List[SkillSchema]]
@@ -72,7 +71,6 @@ class CostumeSchema:
     itemType: ItemType
     itemSubType: ItemSubType
     itemId: str
-    equipped: bool
 
 
 @dataclass

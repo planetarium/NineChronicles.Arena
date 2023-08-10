@@ -41,7 +41,7 @@ def get_avatar_state(avatar_addr_list: List[str]) -> List[AvatarStateSchema]:
             address agentAddress name level characterId
             inventory {{
                 equipments {{
-                    id itemType itemSubType elementalType level itemId setId equipped
+                    id itemType itemSubType elementalType level itemId setId
                     stat {{
                         statType totalValue
                     }}
@@ -56,7 +56,7 @@ def get_avatar_state(avatar_addr_list: List[str]) -> List[AvatarStateSchema]:
                     }}
                 }}
                 costumes {{
-                    id itemType itemSubType itemId equipped
+                    id itemType itemSubType itemId
                 }}
             }}
             runes {{

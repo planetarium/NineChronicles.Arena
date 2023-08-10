@@ -42,7 +42,6 @@ class EquipmentSchema(BaseSchema):
     set_id: int
     stat_type: StatType
     stat_value: int
-    equipped: bool
 
     stats_map: EquipmentStatSchema
     skill_list: List[EquipmentSkillSchema]
@@ -56,7 +55,6 @@ class CostumeSchema(BaseSchema):
     sheet_id: int
     item_type: ItemType
     item_subtype: ItemSubType
-    equipped: bool
 
     class Config:
         from_attributes = True
@@ -65,6 +63,14 @@ class CostumeSchema(BaseSchema):
 class InventorySchema(BaseSchema):
     equipment_list: List[EquipmentSchema]
     costume_list: List[CostumeSchema]
+
+
+class RuneSchema(BaseSchema):
+    rune_id: int
+    level: int
+
+    class Config:
+        from_attributes = True
 
 
 class FullAvatarSchema(BaseSchema):
@@ -77,6 +83,7 @@ class FullAvatarSchema(BaseSchema):
     costume_armor_id: int
     title_id: Optional[int]
     inventory: InventorySchema
+    rune_list: List[RuneSchema]
 
     class Config:
         from_attributes = True
