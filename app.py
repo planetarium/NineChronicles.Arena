@@ -8,6 +8,7 @@ from dotenv import dotenv_values
 from arena.arena_cdk_stack import ArenaStack
 from common import Config
 from common.shared_stack import SharedStack
+from worker.worker_cdk_stack import WorkerStack
 
 stage = os.environ.get("STAGE", "development")
 
@@ -33,6 +34,15 @@ shared = SharedStack(
 
 ArenaStack(
     app, f"{config.stage}-9c-arena-APIStack",
+    env=cdk.Environment(
+        account=config.account_id, region=config.region_name,
+    ),
+    config=config,
+    shared_stack=shared,
+)
+
+WorkerStack(
+    app, f"{config.stage}-9c-arena-WorkerStack",
     env=cdk.Environment(
         account=config.account_id, region=config.region_name,
     ),

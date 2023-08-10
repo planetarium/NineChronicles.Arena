@@ -37,7 +37,8 @@ class EquipmentItemSheet(Base):
 class CostumeStatSheet(Base):
     __tablename__ = "costume_stat_sheet"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, nullable=False)
+    costume_id = Column(Integer, nullable=False)
     type = Column(Enum(StatType), nullable=False)  # stat_type in CSV file
     value = Column(Integer, nullable=False)  # stat_value in CSV file
 

@@ -20,16 +20,16 @@ class ArenaStack(Stack):
             raise ValueError("Shared stack not found. Please provide shared stack.")
         super().__init__(scope, construct_id, **kwargs)
 
-        # Lambda Layer
-        layer = _lambda.LayerVersion(
-            self, f"{config.stage}-9c-arena-api-lambda-layer",
-            code=_lambda.AssetCode("arena/layer/"),
-            description="Lambda layer for 9c Arena API Service",
-            compatible_runtimes=[
-                _lambda.Runtime.PYTHON_3_10,
-            ],
-            removal_policy=RemovalPolicy.DESTROY,
-        )
+        # # Lambda Layer
+        # layer = _lambda.LayerVersion(
+        #     self, f"{config.stage}-9c-arena-api-lambda-layer",
+        #     code=_lambda.AssetCode("arena/layer/"),
+        #     description="Lambda layer for 9c Arena API Service",
+        #     compatible_runtimes=[
+        #         _lambda.Runtime.PYTHON_3_10,
+        #     ],
+        #     removal_policy=RemovalPolicy.DESTROY,
+        # )
 
         # Lambda Role
         role = _iam.Role(
@@ -39,11 +39,22 @@ class ArenaStack(Stack):
                 _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaVPCAccessExecutionRole"),
             ],
         )
+        role.add_to_policy(
+            _iam.PolicyStatement(
+                actions=["secretsmanager:GetSecretValue"],
+                resources=[shared_stack.rds.secret.secret_arn],
+            )
+        )
 
         # Environment Variables
         env = {
             "REGION_NAME": config.region_name,
             "STAGE": config.stage,
+            "SECRET_ARN": shared_stack.rds.secret.secret_arn,
+            "DB_URI": f"postgresql://"
+                      f"{shared_stack.credentials.username}:[DB_PASSWORD]"
+                      f"@{shared_stack.rds.db_instance_endpoint_address}"
+                      f"/arena",
             "LOGGING_LEVEL": "INFO",
             "DB_ECHO": "False",
             "HEADLESS": config.headless,
@@ -61,11 +72,12 @@ class ArenaStack(Stack):
             description="HTTP API/Backoffice service of NineChronicles.Arena",
             code=_lambda.AssetCode(".", exclude=exclude_list),
             handler="arena.main.handler",
-            layers=[layer],
+            layers=[shared_stack.layer],
             role=role,
             vpc=shared_stack.vpc,
-            timeout=cdk_core.Duration.seconds(10),
+            timeout=cdk_core.Duration.seconds(15),
             environment=env,
+            memory_size=256,
         )
 
         # ACM & Custom Domain

@@ -49,7 +49,6 @@ class EquipmentSchema:
     level: int
     itemId: str
     setId: int
-    equipped: bool
     stat: Union[Dict, StatSchema]
     skills: Union[List[Dict], List[SkillSchema]]
     buffSkills: Union[List[Dict], List[SkillSchema]]
@@ -72,7 +71,6 @@ class CostumeSchema:
     itemType: ItemType
     itemSubType: ItemSubType
     itemId: str
-    equipped: bool
 
 
 @dataclass
@@ -86,6 +84,12 @@ class InventorySchema:
 
 
 @dataclass
+class RuneSchema:
+    runeId: int
+    level: int
+
+
+@dataclass
 class AvatarStateSchema:
     address: str
     agentAddress: str
@@ -93,6 +97,8 @@ class AvatarStateSchema:
     level: int
     characterId: int
     inventory: Union[Dict, InventorySchema]
+    runes: Union[List[Dict], List[RuneSchema]]
 
     def __post_init__(self):
         self.inventory = InventorySchema(**self.inventory)
+        self.runes = [RuneSchema(**x) for x in self.runes]

@@ -1,8 +1,12 @@
+import random
+from typing import List
+
+from common.schemas.arena import ArenaInformationSchema
 from common.schemas.avatar import AvatarStateSchema
 
 
-def mock_get_avatar_state(avatar_addr: str) -> AvatarStateSchema:
-    return AvatarStateSchema(
+def mock_get_avatar_state(avatar_addr_list: List[str]) -> List[AvatarStateSchema]:
+    return [AvatarStateSchema(
         **{
             "address": "0x211939355049999363383840912",
             "agentAddress": "0x81291023468377205534914161158",
@@ -394,7 +398,56 @@ def mock_get_avatar_state(avatar_addr: str) -> AvatarStateSchema:
                         "itemId": "066c66d4-c49f-4e3e-8fa2-78d85f6cdcab",
                         "equipped": True
                     }
-                ]
-            }
+                ],
+            },
+            "runes": [
+                {
+                    "runeId": 10001,
+                    "level": 9
+                },
+                {
+                    "runeId": 10002,
+                    "level": 79
+                },
+                {
+                    "runeId": 10003,
+                    "level": 42
+                },
+                {
+                    "runeId": 10011,
+                    "level": 52
+                },
+                {
+                    "runeId": 10012,
+                    "level": 78
+                },
+                {
+                    "runeId": 10013,
+                    "level": 40
+                },
+                {
+                    "runeId": 20001,
+                    "level": 10
+                },
+                {
+                    "runeId": 30001,
+                    "level": 117
+                }
+            ]
         }
-    )
+    )]
+
+
+def mock_get_arena_information(championship: int, round: int, avatar_addr_list: List[str]) -> List[ArenaInformationSchema]:
+    return [
+        ArenaInformationSchema(
+            avatarAddress="0x211939355049999363383840912",
+            address="0x001",
+            win=random.choice(range(10)),
+            lose=random.choice(range(10)),
+            score=random.choice(range(500, 2000)),
+            ticket=random.choice(range(9)),
+            ticketResetCount=random.choice(range(20)),
+            purchasedTicketCount=random.choice(range(10))
+        )
+    ]
